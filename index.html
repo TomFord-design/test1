@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>简易浏览器</title>
+  <style>
+    /* 整体浏览器容器样式 */
+   .browser-container {
+      font-family: Arial, sans-serif;
+      width: 1000px;
+      margin: 0 auto;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+    }
+
+    /* 导航栏样式 */
+   .navbar {
+      display: flex;
+      align-items: center;
+      padding: 15px;
+      background-color: #f5f5f5;
+      border-bottom: 1px solid #ccc;
+    }
+
+   .navbar button {
+      padding: 10px 20px;
+      margin-right: 15px;
+      border: none;
+      border-radius: 5px;
+      background-color: #e0e0e0;
+      cursor: pointer;
+    }
+
+   .navbar button:hover {
+      background-color: #ccc;
+    }
+
+   .navbar input {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    /* 网页显示区域（iframe）样式 */
+    #webView {
+      border: none;
+      height: 75vh;
+    }
+
+    /* 隐藏的面板通用样式（历史记录、收藏夹、设置等） */
+   .panel {
+      padding: 25px;
+      border-top: 1px solid #ccc;
+      display: none;
+    }
+
+   .hidden {
+      display: none;
+    }
+
+    /* 历史记录和收藏夹列表样式 */
+    #historyList,
+    #bookmarksList {
+      list-style-type: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    #historyList li,
+    #bookmarksList li {
+      padding: 8px 0;
+      border-bottom: 1px solid #ccc;
+      cursor: pointer;
+    }
+
+    #historyList li:hover,
+    #bookmarksList li:hover {
+      background-color: #f5f5f5;
+    }
+
+    /* 清除历史记录按钮样式 */
+    #clearHistoryButton {
+      margin-top: 15px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      background-color: #e0e0e0;
+      cursor: pointer;
+    }
+
+    #clearHistoryButton:hover {
+      background-color: #ccc;
+    }
+
+    /* 添加、移除收藏夹按钮样式 */
+    #addBookmarkButton,
+    #removeBookmarkButton {
+      margin-top: 15px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      background-color: #e0e0e0;
+      cursor: pointer;
+    }
+
+    #addBookmarkButton:hover,
+    #removeBookmarkButton:hover {
+      background-color: #ccc;
+    }
+
+    /* 设置区域按钮样式 */
+    #saveSettingsButton {
+      margin-top: 15px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      background-color: #e0e0e0;
+      cursor: pointer;
+    }
+
+    #saveSettingsButton:hover {
+      background-color: #ccc;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="browser-container">
+    <!-- 浏览器顶部导航栏 -->
+    <div class="navbar">
+      <button id="backButton">后退</button>
+      <button id="forwardButton">前进</button>
+      <button id="refreshButton">刷新</button>
+      <button id="stopButton">停止</button>
+      <input type="text" id="searchInput" placeholder="输入网址或搜索内容">
+      <button id="goButton">前往</button>
+      <button id="historyButton">历史记录</button>
+      <button id="bookmarksButton">收藏夹</button>
+      <button id="settingsButton">设置</button>
+    </div>
+    <!-- 网页显示区域 -->
+    <iframe id="webView" width="100%" height="75vh"></iframe>
+    <!-- 历史记录区域 -->
+    <div id="historyPanel" class="panel hidden">
+      <h3>历史浏览记录</h3>
+      <ul id="historyList"></ul>
+      <button id="clearHistoryButton">清除历史记录</button>
+    </div>
+    <!-- 收藏夹区域 -->
+    <div id="bookmarksPanel" class="panel hidden">
+      <h3>收藏夹</h3>
+      <ul id="bookmarksList"></ul>
+      <input type="text" id="bookmarkNameInput" placeholder="输入收藏名称">
+      <button id="addBookmarkButton">添加收藏</button>
+      <button id="removeBookmarkButton">移除收藏</button>
+    </div>
+    <!-- 设置区域 -->
+    <div id="settingsPanel" class="panel hidden">
+      <h3>设置</h3>
+      <label for="homepageInput">设置主页：</label>
+      <input type="text" id="homepageInput" placeholder="输入主页网址">
+      <button id="saveSettingsButton">保存设置</button>
+      <label for="minimizeOption">最小化到系统托盘（暂未实现功能）：</label>
+      <input type="checkbox" id="minimizeOption" disabled>
+    </div>
+  </div>
+  <script>
+    // 获取页面元素
+    const backButton = document.getElementById('backButton');
+    const forwardButton = document.getElementById('forwardButton');
+    const refreshButton = document.getElementById('refreshButton');
+    const stopButton = document.getElementById('stopButton');
+    const searchInput = document.getElementById('searchInput');
+    const goButton = document.getElementById('goButton');
+    const webView = document.getElementById('webView');
+    const historyButton = document.getElementById('historyButton');
+    const historyPanel = document.getElementById('historyPanel');
+    const historyList = document.getElementById('historyList');
+    const clearHistoryButton = document.getElementById('clearHistoryButton');
+    const bookmarksButton = document.getElementById('bookmarksButton');
+    const bookmarksPanel = document.getElementById('bookmarksPanel');
+    const bookmarksList = document.getElementById('bookmarksList');
+    const bookmarkNameInput = document.getElementById('bookmarkNameInput');
+    const addBookmarkButton = document.getElementById('addBookmarkButton');
+    const removeBookmarkButton = document.getElementById('removeBookmarkButton');
+    const settingsButton = document.getElementById('settingsButton');
+    const settingsPanel = document.getElementById('settingsPanel');
+    const homepageInput = document.getElementById('homepageInput');
+    const saveSettingsButton = document.getElementById('saveSettingsButton');
+
+    // 用于存储历史记录的数组
+    const history = [];
+    // 用于存储收藏夹数据的对象，键为网址，值为收藏名称
+    const bookmarks = {};
+    // 当前主页网址
+    let homepage = '';
+
+    // 后退按钮点击事件
+    backButton.addEventListener('click', function () {
+      if (window.history.length > 1) {
+        window.history.back();
+      }
+    });
+
+    // 前进按钮点击事件
+    forwardButton.addEventListener('click', function () {
+      if (window.history.length > 0) {
+        window.history.forward();
+      }
+    });
+
+    // 刷新按钮点击事件
+    refreshButton.addEventListener('click', function () {
+      webView.contentWindow.location.reload();
+    });
+
+    // 停止按钮点击事件（暂简单模拟，实际可能需要更复杂交互）
+    stopButton.addEventListener('click', function () {
+      // 这里可以添加更多逻辑来真正停止页面加载等操作，目前简单处理
+      console.log('停止操作，暂未完整实现');
+    });
+
+    // 前往按钮点击事件
+    goButton.addEventListener('click', function () {
+      const inputValue = searchInput.value.trim();
+      if (inputValue.startsWith('http://') || inputValue.startsWith('https://')) {
+        webView.src = inputValue;
+        history.push(inputValue);
+      } else {
+        // 这里可以添加搜索引擎跳转逻辑，简单示例暂未实现，假设跳转到百度搜索
+        webView.src = `https://www.baidu.com/s?wd=${encodeURIComponent(inputValue)}`;
+        history.push(`https://www.baidu.com/s?wd=${encodeURIComponent(inputValue)}`);
+      }
+    });
+
+    // 历史记录按钮点击事件
+    historyButton.addEventListener('click', function () {
+      historyPanel.style.display = 'block';
+      historyList.innerHTML = '';
+      history.forEach((url, index) => {
+        const listItem = document.createElement('li');
+        listItem.textContent = url;
+        listItem.addEventListener('click', function () {
+          webView.src = url;
+        });
+        historyList.appendChild(listItem);
+      });
+    });
+
+    // 清除历史记录按钮点击事件
+    clearHistoryButton.addEventListener('click', function () {
+      history.length = 0;
+      historyList.innerHTML = '';
+    });
+
+    // 收藏夹按钮点击事件
+    bookmarksButton.addEventListener('click', function () {
+      bookmarksPanel.style.display = 'block';
+      bookmarksList.innerHTML = '';
+      for (const url in bookmarks) {
+        const listItem = document.createElement('li');
+        listItem.textContent = bookmarks[url];
+        listItem.addEventListener('click', function () {
+          webView.src = url;
+        });
+        bookmarksList.appendChild(listItem);
+      }
+    });
+
+    // 添加收藏夹按钮点击事件
+    addBookmarkButton.addEventListener('click', function () {
+      const bookmarkName = bookmarkNameInput.value.trim();
+      const currentUrl = webView.src;
+      if (bookmarkName && currentUrl) {
+        bookmarks[currentUrl] = bookmarkName;
+        bookmarkNameInput.value = '';
+      }
+    });
+
+    // 移除收藏夹按钮点击事件
+    removeBookmarkButton.addEventListener('click', function () {
+      const currentUrl = webView.src;
+      if (bookmarks[currentUrl]) {
+        delete bookmarks[currentUrl];
+      }
+    });
+
+    // 设置按钮点击事件
+    settingsButton.addEventListener('click', function () {
+      settingsPanel.style.display = 'block';
+    });
+
+    // 保存设置按钮点击事件
+    saveSettingsButton.addEventListener('click', function () {
+      homepage = homepageInput.value.trim();
+    });
+  </script>
+</body>
+
+</html>
